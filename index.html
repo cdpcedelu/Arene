@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ARENE - Gestión de Pacientes y Facturación | 2026-03-07 02:00 ARG -->
+<!-- ARENE - Gestión de Pacientes y Facturación | 2026-03-07 02:30 ARG -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1017,8 +1017,9 @@ async function sha256(str) {
 // ── USUARIOS: agregá/quitá usuarios acá ──────────────────────────────────────
 // Para generar el hash de una contraseña nueva: https://emn178.github.io/online-tools/sha256.html
 const USUARIOS = {
-  'admin':  { hash: '4d54fe6221c710f12fcc87ed35f501faab5546d4e47794ee0c5520e5dc8553cf', role: 'admin' },  // pass: arene2026
-  // 'yani': { hash: 'HASH_SHA256_ACA', role: 'admin' },
+  'admin':   { hash: '4d54fe6221c710f12fcc87ed35f501faab5546d4e47794ee0c5520e5dc8553cf', role: 'admin' },
+  'gr10':    { hash: '2245fc6afc270f0076c80e2a3dcd53b8b7cf601788bb5a0b8f0cdc1b4f23d321', role: 'admin' },
+  'yanina':  { hash: '9fb7dbb64a2175f924b1ace0bf2882c13b1b0dc7a89f03b944194558c7ee816f', role: 'admin' },
 };
 
 async function doLogin() {
