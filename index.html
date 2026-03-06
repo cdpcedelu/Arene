@@ -230,7 +230,8 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   <div class="sidebar-footer">
     <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;color:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.15)" onclick="recargar()">↻ Actualizar datos</button>
     <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;color:rgba(255,100,100,0.6);border-color:rgba(255,100,100,0.2);margin-top:6px" onclick="doLogout()">⏻ Cerrar sesión</button>
-    <div class="version" style="margin-top:8px">v1.0 · 2026-03-06 ARG</div>
+    <div class="version" style="margin-top:8px">v1.0 · 2026-03-07 ARG</div>
+    <div id="sidebar-user" style="margin-top:5px;font-size:11px;color:rgba(255,255,255,0.45)"></div>
     <div style="margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,0.07)">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
         <svg width="20" height="23" viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -515,7 +516,10 @@ let pacPage = 1, facPage = 1, deuPage = 1;
 async function recargar() {
   showLoading('Cargando datos desde Google Sheets...');
   try {
-    const res = await fetch(API_URL + '?action=getData', {redirect: 'follow'});
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    const res = await fetch(API_URL + '?action=getData', {signal: ctrl.signal});
+    clearTimeout(timer);
     const data = await res.json();
     pacientes = data.pacientes || [];
     facturas  = data.facturas  || [];
@@ -535,11 +539,14 @@ async function recargar() {
 }
 
 async function apiPost(body) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
   const res = await fetch(API_URL, {
     method: 'POST',
     body: JSON.stringify(body),
-    redirect: 'follow'
+    signal: ctrl.signal
   });
+  clearTimeout(timer);
   return res.json();
 }
 
