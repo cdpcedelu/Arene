@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<!-- ARENE - Gestión de Pacientes y Facturación | 2026-03-06 21:00 ARG -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARENE · Gestión Clínica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0d2d45;
+  --teal: #145374;
+  --teal-light: #1a6896;
+  --amber: #d4872a;
+  --amber-light: #f0a942;
+  --cream: #f5f0e8;
+  --cream-dark: #ede5d5;
+  --white: #ffffff;
+  --success: #1e7d4f;
+  --success-bg: #d4eddf;
+  --danger: #b52d2d;
+  --danger-bg: #fde8e8;
+  --warning: #a06010;
+  --warning-bg: #fef3cd;
+  --text: #1c2b38;
+  --text-muted: #5a7184;
+  --border: #d0c9bc;
+  --shadow: 0 2px 12px rgba(13,45,69,0.10);
+  --shadow-lg: 0 8px 32px rgba(13,45,69,0.15);
+  --radius: 10px;
+  --sidebar-w: 230px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; display: flex; }
+
+/* SIDEBAR */
+#sidebar { width: var(--sidebar-w); min-height: 100vh; background: var(--navy); display: flex; flex-direction: column; position: fixed; left: 0; top: 0; z-index: 100; box-shadow: 4px 0 24px rgba(0,0,0,0.2); }
+.sidebar-brand { padding: 28px 22px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-brand .logo-text { font-family: 'Crimson Pro', serif; font-size: 28px; font-weight: 700; color: var(--amber-light); letter-spacing: 3px; }
+.sidebar-brand .logo-sub { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+.sidebar-nav { flex: 1; padding: 16px 0; }
+.nav-item { display: flex; align-items: center; gap: 11px; padding: 11px 22px; cursor: pointer; color: rgba(255,255,255,0.55); font-size: 13.5px; font-weight: 400; transition: all 0.18s; border-left: 3px solid transparent; margin: 2px 0; }
+.nav-item:hover { color: rgba(255,255,255,0.88); background: rgba(255,255,255,0.05); }
+.nav-item.active { color: var(--amber-light); background: rgba(212,135,42,0.12); border-left-color: var(--amber-light); font-weight: 500; }
+.nav-item .nav-icon { font-size: 17px; width: 22px; text-align: center; }
+.sidebar-footer { padding: 16px 22px; border-top: 1px solid rgba(255,255,255,0.08); }
+.sidebar-footer .version { font-size: 10px; color: rgba(255,255,255,0.25); }
+
+/* MAIN */
+#main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+.page-header { background: var(--white); border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+.page-header h1 { font-family: 'Crimson Pro', serif; font-size: 22px; font-weight: 600; color: var(--navy); }
+.page-header .header-right { display: flex; align-items: center; gap: 12px; }
+.page-content { padding: 28px 32px; }
+
+/* LOADING OVERLAY */
+#loading-overlay { position: fixed; inset: 0; background: rgba(13,45,69,0.65); z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+#loading-overlay.hidden { display: none; }
+.spinner { width: 44px; height: 44px; border: 4px solid rgba(255,255,255,0.25); border-top-color: var(--amber-light); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-overlay p { color: white; font-size: 15px; font-family: 'IBM Plex Sans', sans-serif; }
+
+/* VIEWS */
+.view { display: none; }
+.view.active { display: block; }
+
+/* KPI CARDS */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.kpi-card { background: var(--white); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); border-top: 3px solid transparent; }
+.kpi-card.navy { border-top-color: var(--navy); }
+.kpi-card.teal { border-top-color: var(--teal-light); }
+.kpi-card.success { border-top-color: var(--success); }
+.kpi-card.danger { border-top-color: var(--danger); }
+.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+.kpi-value { font-family: 'Crimson Pro', serif; font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1; }
+.kpi-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+
+/* TABLES */
+.table-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.table-toolbar { padding: 14px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.table-toolbar .toolbar-title { font-weight: 600; color: var(--navy); font-size: 14px; flex: 1; }
+.search-box { display: flex; align-items: center; gap: 7px; background: var(--cream); border: 1px solid var(--border); border-radius: 6px; padding: 6px 11px; }
+.search-box input { border: none; background: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); width: 180px; }
+.filter-select { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12.5px; background: var(--cream); color: var(--text); font-family: inherit; outline: none; cursor: pointer; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: var(--cream); }
+thead th { padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody tr { border-bottom: 1px solid rgba(208,201,188,0.4); transition: background 0.12s; }
+tbody tr:hover { background: rgba(20,83,116,0.04); }
+tbody td { padding: 10px 14px; vertical-align: middle; }
+.table-pagination { padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted); }
+.pagination-btns { display: flex; gap: 4px; }
+.pag-btn { border: 1px solid var(--border); background: var(--white); color: var(--text); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 12.5px; font-family: inherit; transition: all 0.14s; }
+.pag-btn:hover { background: var(--cream); }
+.pag-btn.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+.pag-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* BADGES */
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.badge-simple { background: #dbeafe; color: #1e40af; }
+.badge-intensivo { background: #ede9fe; color: #5b21b6; }
+.badge-cognitivo { background: #d1fae5; color: #065f46; }
+.badge-os { background: var(--cream-dark); color: var(--teal); }
+.badge-activo { background: var(--success-bg); color: var(--success); }
+.badge-alta { background: var(--cream-dark); color: var(--text-muted); }
+.badge-pagado { background: var(--success-bg); color: var(--success); }
+.badge-pendiente { background: var(--warning-bg); color: var(--warning); }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+.btn-primary { background: var(--navy); color: var(--white); }
+.btn-primary:hover { background: var(--teal); }
+.btn-success { background: var(--success); color: var(--white); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { background: var(--cream); }
+.btn-danger { background: var(--danger); color: var(--white); }
+.btn-sm { padding: 5px 12px; font-size: 12.5px; }
+.btn-icon { padding: 5px 8px; font-size: 14px; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(13,45,69,0.55); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--white); border-radius: 14px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: slideUp 0.2s ease; }
+@keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+.modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-header h2 { font-family: 'Crimson Pro', serif; font-size: 20px; color: var(--navy); }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 0 4px; line-height: 1; }
+.modal-body { padding: 20px 24px; }
+.modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-group label { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group select, .form-group textarea { border: 1px solid var(--border); border-radius: 6px; padding: 8px 11px; font-size: 13.5px; font-family: inherit; outline: none; background: var(--cream); color: var(--text); transition: border 0.15s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--teal-light); background: var(--white); }
+.form-group textarea { resize: vertical; min-height: 70px; }
+.form-section-title { grid-column: 1 / -1; font-family: 'Crimson Pro', serif; font-size: 15px; color: var(--navy); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-top: 6px; }
+
+/* CHARTS */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+.chart-card { background: var(--white); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.chart-card h3 { font-family: 'Crimson Pro', serif; font-size: 16px; color: var(--navy); margin-bottom: 14px; }
+.os-bar { display: flex; flex-direction: column; gap: 8px; }
+.os-bar-item { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+.os-bar-name { width: 120px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.os-bar-track { flex: 1; height: 8px; background: var(--cream-dark); border-radius: 4px; overflow: hidden; }
+.os-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--teal), var(--teal-light)); }
+.os-bar-val { font-size: 11.5px; color: var(--text-muted); min-width: 70px; text-align: right; }
+
+/* MISC */
+.amount-neg { color: var(--danger); font-weight: 500; }
+.amount-pos { color: var(--success); font-weight: 500; }
+.amount-zero { color: var(--text-muted); }
+.text-right { text-align: right; }
+.no-data { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+.table-wrap { overflow-x: auto; }
+
+/* TOAST */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { background: var(--navy); color: white; padding: 11px 18px; border-radius: 8px; font-size: 13px; box-shadow: var(--shadow-lg); animation: slideUp 0.2s; display: flex; align-items: center; gap: 8px; min-width: 260px; }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <p id="loading-msg">Cargando datos...</p>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo-text">ARENE</div>
+    <div class="logo-sub">Rehabilitación Neurológica</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item active" data-view="dashboard"><span class="nav-icon">◉</span> Dashboard</div>
+    <div class="nav-item" data-view="pacientes"><span class="nav-icon">♟</span> Pacientes</div>
+    <div class="nav-item" data-view="facturacion"><span class="nav-icon">◈</span> Facturación</div>
+    <div class="nav-item" data-view="deudores"><span class="nav-icon">⚠</span> Deudores</div>
+    <div class="nav-item" data-view="resumen"><span class="nav-icon">▦</span> Por Obra Social</div>
+  </div>
+  <div class="sidebar-footer">
+    <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;color:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.15)" onclick="recargar()">↻ Actualizar datos</button>
+    <div class="version" style="margin-top:8px">v1.0 · 2026-03-06 ARG</div>
+    <div style="margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,0.07)">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+        <svg width="20" height="23" viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sg1" x1="0" y1="0" x2="28" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#f0a942"/><stop offset="100%" stop-color="#b86010"/>
+            </linearGradient>
+            <linearGradient id="sg2" x1="0" y1="0" x2="28" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#1a6896"/><stop offset="100%" stop-color="#0d2d45"/>
+            </linearGradient>
+          </defs>
+          <path d="M14 1 L26 5 L26 17 C26 24 14 31 14 31 C14 31 2 24 2 17 L2 5 Z" fill="url(#sg1)"/>
+          <path d="M14 3.5 L4.5 7 L4.5 17 C4.5 22.5 14 28.5 14 28.5 Z" fill="url(#sg2)" opacity="0.9"/>
+          <path d="M14 3.5 L23.5 7 L23.5 17 C23.5 22.5 14 28.5 14 28.5 Z" fill="#f5b84a" opacity="0.55"/>
+          <line x1="14" y1="3" x2="14" y2="29" stroke="white" stroke-width="0.8" opacity="0.5"/>
+          <line x1="4" y1="14" x2="24" y2="14" stroke="white" stroke-width="0.8" opacity="0.5"/>
+          <text x="14" y="18" text-anchor="middle" font-family="Arial" font-weight="800" font-size="13" fill="white" letter-spacing="-0.5">10</text>
+        </svg>
+        <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.7);letter-spacing:0.8px">GR10 · Softwares</span>
+      </div>
+      <a href="https://wa.me/5491161630873" target="_blank" style="display:flex;align-items:center;gap:6px;text-decoration:none;color:rgba(255,255,255,0.38);font-size:10.5px;transition:color 0.15s" onmouseover="this.style.color='#25d366'" onmouseout="this.style.color='rgba(255,255,255,0.38)'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        +54 9 11 6163-0873
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="page-header">
+    <h1 id="page-title">Dashboard</h1>
+    <div class="header-right">
+      <span id="header-date" style="font-size:12px;color:var(--text-muted)"></span>
+      <button class="btn btn-primary btn-sm" id="header-action-btn" style="display:none"></button>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view active">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3>Saldo Pendiente por Obra Social</h3>
+          <div class="os-bar" id="os-saldo-chart"></div>
+        </div>
+        <div class="chart-card">
+          <h3>Actividad Reciente</h3>
+          <div id="recent-activity"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PACIENTES -->
+    <div id="view-pacientes" class="view">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="toolbar-title">Listado de Pacientes</span>
+          <div class="search-box"><span>🔍</span><input type="text" id="pac-search" placeholder="Nombre, DNI..." oninput="renderPacientes()"></div>
+          <select class="filter-select" id="pac-filter-modulo" onchange="renderPacientes()">
+            <option value="">Todos los módulos</option>
+            <option>SIMPLE</option><option>INTENSIVO</option><option>COGNITIVO</option>
+          </select>
+          <select class="filter-select" id="pac-filter-estado" onchange="renderPacientes()">
+            <option value="">Activos y dados de alta</option>
+            <option value="activo">Solo Activos</option>
+            <option value="alta">Solo Alta</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openModalPaciente()">+ Agregar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Paciente</th><th>DNI</th><th>Obra Social</th><th>Módulo</th>
+              <th>Inicio</th><th>Alta</th><th>Estado</th><th>Notas</th><th style="text-align:center">Acc.</th>
+            </tr></thead>
+            <tbody id="pac-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-pagination" id="pac-pagination"></div>
+      </div>
+    </div>
+
+    <!-- FACTURACIÓN -->
+    <div id="view-facturacion" class="view">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="toolbar-title">Registros de Facturación</span>
+          <div class="search-box"><span>🔍</span><input type="text" id="fac-search" placeholder="Paciente, factura, OS..." oninput="renderFacturas()"></div>
+          <select class="filter-select" id="fac-filter-os" onchange="renderFacturas()"><option value="">Todas las OS</option></select>
+          <select class="filter-select" id="fac-filter-estado" onchange="renderFacturas()">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="pagado">Pagado</option>
+            <option value="parcial">Parcial</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openModalFactura()">+ Nueva Factura</button>
+          <button class="btn btn-outline btn-sm" onclick="exportCSV()">↓ CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>Paciente</th><th>OS</th><th>Módulo</th><th>N° Fact.</th>
+              <th class="text-right">Facturado</th><th class="text-right">Abonado</th>
+              <th class="text-right">N/C</th><th class="text-right">Saldo</th>
+              <th>Período</th><th>Expte.</th><th>Reint.</th><th style="text-align:center">Acc.</th>
+            </tr></thead>
+            <tbody id="fac-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-pagination" id="fac-pagination"></div>
+      </div>
+    </div>
+
+    <!-- DEUDORES -->
+    <div id="view-deudores" class="view">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="toolbar-title">Pacientes con Saldo Pendiente</span>
+          <div class="search-box"><span>🔍</span><input type="text" id="deu-search" placeholder="Buscar..." oninput="renderDeudores()"></div>
+          <select class="filter-select" id="deu-filter-os" onchange="renderDeudores()"><option value="">Todas las OS</option></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Paciente</th><th>OS</th><th class="text-right">Facturado</th>
+              <th class="text-right">Abonado</th><th class="text-right">N/C</th>
+              <th class="text-right">Saldo Pendiente</th><th># Fact.</th>
+            </tr></thead>
+            <tbody id="deu-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-pagination" id="deu-pagination"></div>
+      </div>
+    </div>
+
+    <!-- RESUMEN OS -->
+    <div id="view-resumen" class="view">
+      <div class="table-card">
+        <div class="table-toolbar"><span class="toolbar-title">Resumen por Obra Social</span></div>
+        <table>
+          <thead><tr>
+            <th>Obra Social</th><th class="text-right">Pacientes</th><th class="text-right">Facturas</th>
+            <th class="text-right">Total Facturado</th><th class="text-right">Total Abonado</th>
+            <th class="text-right">Total N/C</th><th class="text-right">Saldo Total</th>
+          </tr></thead>
+          <tbody id="res-tbody"></tbody>
+          <tfoot id="res-tfoot" style="background:var(--cream);font-weight:600;border-top:2px solid var(--border)"></tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- MODAL PACIENTE -->
+<div class="modal-overlay" id="modal-paciente">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-pac-title">Nuevo Paciente</h2>
+      <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Datos del Paciente</div>
+        <div class="form-group full"><label>Nombre Completo *</label><input type="text" id="pac-nombre" placeholder="Apellido Nombre"></div>
+        <div class="form-group"><label>DNI</label><input type="text" id="pac-dni" placeholder="12345678"></div>
+        <div class="form-group"><label>Fecha de Nacimiento</label><input type="date" id="pac-fnac"></div>
+        <div class="form-group">
+          <label>Obra Social *</label>
+          <input type="text" id="pac-os" list="os-list" placeholder="PAMI, OSER, PARTICULAR...">
+          <datalist id="os-list">
+            <option>PAMI</option><option>OSER</option><option>PARTICULAR</option><option>OSDE</option>
+            <option>IOSFA</option><option>Ministerio</option><option>OSFATLYF</option><option>OMINT</option>
+            <option>OSSEG</option><option>OSUNER</option><option>UPCN</option><option>MUNICIPAL</option>
+            <option>OSPE</option><option>OSECAC</option><option>INCLUIR</option><option>SAS</option>
+            <option>OSPLA</option><option>Hospital</option>
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>Módulo</label>
+          <select id="pac-modulo"><option value="">-</option><option>SIMPLE</option><option>INTENSIVO</option><option>COGNITIVO</option></select>
+        </div>
+        <div class="form-group"><label>Fecha de Inicio</label><input type="date" id="pac-inicio"></div>
+        <div class="form-group"><label>Fecha de Alta (si aplica)</label><input type="date" id="pac-alta"></div>
+        <div class="form-group full"><label>Domicilio</label><input type="text" id="pac-domicilio" placeholder="Dirección"></div>
+        <div class="form-group full"><label>Dato de Contacto</label><input type="text" id="pac-contacto" placeholder="Teléfono / Familiar"></div>
+        <div class="form-group full"><label>Notas / Observaciones</label><textarea id="pac-notas" placeholder="Observaciones, seguimiento de pagos..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-paciente')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-pac" onclick="savePaciente()">Guardar Paciente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FACTURA -->
+<div class="modal-overlay" id="modal-factura">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-fac-title">Nueva Factura</h2>
+      <button class="modal-close" onclick="closeModal('modal-factura')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Datos de la Factura</div>
+        <div class="form-group"><label>Fecha de Pago / Emisión</label><input type="date" id="fac-fecha"></div>
+        <div class="form-group"><label>N° Factura</label><input type="number" id="fac-nro" placeholder="1700"></div>
+        <div class="form-group full">
+          <label>Paciente *</label>
+          <input type="text" id="fac-paciente" list="pac-list" placeholder="Nombre del paciente">
+          <datalist id="pac-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label>Obra Social</label>
+          <input type="text" id="fac-os" list="os-list2" placeholder="PAMI, OSER...">
+          <datalist id="os-list2">
+            <option>PAMI</option><option>OSER</option><option>PARTICULAR</option><option>OSDE</option>
+            <option>IOSFA</option><option>Ministerio</option><option>OSFATLYF</option><option>OMINT</option>
+            <option>OSSEG</option><option>OSUNER</option><option>UPCN</option><option>MUNICIPAL</option>
+            <option>OSPE</option><option>OSECAC</option><option>INCLUIR</option><option>SAS</option>
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>Módulo</label>
+          <select id="fac-modulo"><option value="">-</option><option>SIMPLE</option><option>INTENSIVO</option><option>COGNITIVO</option></select>
+        </div>
+        <div class="form-section-title">Importes</div>
+        <div class="form-group"><label>Monto Factura ($)</label><input type="number" step="0.01" id="fac-monto-factura" placeholder="0.00" oninput="calcSaldo()"></div>
+        <div class="form-group"><label>Monto Abonado ($)</label><input type="number" step="0.01" id="fac-monto-abonado" placeholder="0.00" oninput="calcSaldo()"></div>
+        <div class="form-group"><label>N° Nota de Crédito</label><input type="number" id="fac-nro-nc" placeholder="-"></div>
+        <div class="form-group"><label>Monto N/C ($)</label><input type="number" step="0.01" id="fac-monto-nc" placeholder="0.00" oninput="calcSaldo()"></div>
+        <div class="form-group"><label>Saldo (calculado $)</label><input type="number" step="0.01" id="fac-saldo" readonly style="background:var(--cream-dark);font-weight:600"></div>
+        <div class="form-group"><label>Período</label><input type="text" id="fac-periodo" placeholder="2026-03-01, MARZO..."></div>
+        <div class="form-group"><label>Expediente</label><input type="text" id="fac-expediente" placeholder="Nº expediente"></div>
+        <div class="form-group">
+          <label>Reintegro</label>
+          <select id="fac-reintegro"><option value="">-</option><option>SI</option><option>NO</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-factura')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-fac" onclick="saveFactura()">Guardar Factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRM -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h2>Confirmar eliminación</h2><button class="modal-close" onclick="closeModal('modal-confirm')">✕</button></div>
+    <div class="modal-body"><p id="confirm-msg" style="font-size:14px"></p></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-confirm')">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// CONFIGURACIÓN — reemplazá con tu URL de Apps Script
+// =====================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbxU_q1oAD8o__OQfTyM8wyiWdZgjP74KNlw8o3lV6i6P8ZWGtJ9jT_WL1o1cKUIJRzC/exec';
+// Ejemplo: 'https://script.google.com/macros/s/AKfyc.../exec'
+
+// =====================================================
+// ESTADO
+// =====================================================
+let pacientes = [], facturas = [];
+let editPacId = null, editFacId = null;
+const PAGE_SIZE = 20;
+let pacPage = 1, facPage = 1, deuPage = 1;
+
+// =====================================================
+// INIT
+// =====================================================
+async function init() {
+  document.getElementById('header-date').textContent =
+    new Date().toLocaleDateString('es-AR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  await recargar();
+}
+
+async function recargar() {
+  showLoading('Cargando datos desde Google Sheets...');
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    pacientes = data.pacientes || [];
+    facturas  = data.facturas  || [];
+    populateOsFilters();
+    updatePacList();
+    renderDashboard();
+    renderPacientes();
+    renderFacturas();
+    renderDeudores();
+    renderResumen();
+    toast('Datos actualizados.', 'success');
+  } catch(e) {
+    toast('Error al cargar datos: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function apiPost(body) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// =====================================================
+// LOADING
+// =====================================================
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg || 'Procesando...';
+  document.getElementById('loading-overlay').classList.remove('hidden');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.add('hidden');
+}
+
+// =====================================================
+// NAVIGATION
+// =====================================================
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+    item.classList.add('active');
+    const view = item.dataset.view;
+    document.getElementById('view-' + view).classList.add('active');
+    const titles = {dashboard:'Dashboard', pacientes:'Pacientes', facturacion:'Facturación', deudores:'Deudores', resumen:'Por Obra Social'};
+    document.getElementById('page-title').textContent = titles[view] || view;
+    const btn = document.getElementById('header-action-btn');
+    if (view === 'pacientes') { btn.textContent = '+ Nuevo Paciente'; btn.onclick = openModalPaciente; btn.style.display=''; }
+    else if (view === 'facturacion') { btn.textContent = '+ Nueva Factura'; btn.onclick = openModalFactura; btn.style.display=''; }
+    else { btn.style.display = 'none'; }
+  });
+});
+
+// =====================================================
+// HELPERS
+// =====================================================
+const fmt = n => n == null ? '-' : new Intl.NumberFormat('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n);
+const fmtShort = n => n == null ? '-' : new Intl.NumberFormat('es-AR', {maximumFractionDigits:0}).format(n);
+const fmtDate = d => d ? String(d).slice(0,10) : '-';
+
+function badgeModulo(m) {
+  const map = {SIMPLE:'badge-simple', INTENSIVO:'badge-intensivo', COGNITIVO:'badge-cognitivo'};
+  return m ? `<span class="badge ${map[m]||'badge-os'}">${m}</span>` : '';
+}
+function badgeSaldo(s) {
+  if (!s || s <= 0) return '<span class="amount-zero">-</span>';
+  return `<span class="amount-neg">$ ${fmt(s)}</span>`;
+}
+function saldoStatus(mf, ma, mnc) {
+  const saldo = (mf||0) - (ma||0) - (mnc||0);
+  if (saldo <= 0) return 'pagado';
+  if ((ma||0) > 0 || (mnc||0) > 0) return 'parcial';
+  return 'pendiente';
+}
+
+function populateOsFilters() {
+  const osList = [...new Set(facturas.map(f => f.ObraSocial).filter(Boolean))].sort();
+  ['fac-filter-os','deu-filter-os'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    while (sel.options.length > 1) sel.remove(1);
+    osList.forEach(os => { const o = document.createElement('option'); o.value = o.textContent = os; sel.appendChild(o); });
+  });
+}
+
+function updatePacList() {
+  const dl = document.getElementById('pac-list');
+  if (!dl) return;
+  dl.innerHTML = pacientes.map(p => `<option value="${p.Nombre||''}">`).join('');
+}
+
+// =====================================================
+// DASHBOARD
+// =====================================================
+function renderDashboard() {
+  const totalFact = facturas.reduce((s,f) => s + (f.MontoFactura||0), 0);
+  const totalAbon = facturas.reduce((s,f) => s + (f.MontoAbonado||0), 0);
+  const totalNC   = facturas.reduce((s,f) => s + (f.MontoNC||0), 0);
+  const totalSaldo= facturas.reduce((s,f) => s + (f.Saldo||0), 0);
+  const activos   = pacientes.filter(p => !p.Alta).length;
+
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card navy"><div class="kpi-label">Pacientes Activos</div><div class="kpi-value">${activos}</div><div class="kpi-sub">de ${pacientes.length} en total</div></div>
+    <div class="kpi-card teal"><div class="kpi-label">Total Facturado</div><div class="kpi-value" style="font-size:20px">$ ${fmtShort(totalFact)}</div><div class="kpi-sub">${facturas.filter(f=>f.MontoFactura).length} facturas</div></div>
+    <div class="kpi-card success"><div class="kpi-label">Total Cobrado</div><div class="kpi-value" style="font-size:20px">$ ${fmtShort(totalAbon+totalNC)}</div><div class="kpi-sub">Abonado + N/C</div></div>
+    <div class="kpi-card danger"><div class="kpi-label">Saldo Pendiente</div><div class="kpi-value" style="font-size:20px;color:var(--danger)">$ ${fmtShort(totalSaldo)}</div><div class="kpi-sub">${facturas.filter(f=>(f.Saldo||0)>0).length} facturas impagas</div></div>
+  `;
+
+  const osSaldos = {};
+  facturas.forEach(f => {
+    if ((f.Saldo||0) > 0 && f.ObraSocial) osSaldos[f.ObraSocial] = (osSaldos[f.ObraSocial]||0) + f.Saldo;
+  });
+  const sorted = Object.entries(osSaldos).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxVal = sorted[0]?.[1] || 1;
+  document.getElementById('os-saldo-chart').innerHTML = sorted.map(([os,val]) => `
+    <div class="os-bar-item">
+      <div class="os-bar-name" title="${os}">${os}</div>
+      <div class="os-bar-track"><div class="os-bar-fill" style="width:${(val/maxVal*100).toFixed(1)}%"></div></div>
+      <div class="os-bar-val">$ ${fmtShort(val)}</div>
+    </div>`).join('');
+
+  const recent = [...facturas].filter(f=>f.Fecha).sort((a,b)=>String(b.Fecha).localeCompare(String(a.Fecha))).slice(0,8);
+  document.getElementById('recent-activity').innerHTML = recent.map(f => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px">
+      <div><div style="font-weight:500;color:var(--navy)">${f.Paciente||''}</div><div style="color:var(--text-muted)">${fmtDate(f.Fecha)} · ${f.ObraSocial||'-'}</div></div>
+      <div style="text-align:right"><div style="font-weight:600">$ ${fmt(f.MontoFactura)}</div>
+        ${(f.Saldo||0)>0 ? `<div style="color:var(--danger);font-size:11px">Saldo: $ ${fmt(f.Saldo)}</div>` : `<div style="color:var(--success);font-size:11px">✓ Pagado</div>`}
+      </div>
+    </div>`).join('');
+}
+
+// =====================================================
+// PACIENTES
+// =====================================================
+function renderPacientes() {
+  const q = document.getElementById('pac-search').value.toLowerCase();
+  const mod = document.getElementById('pac-filter-modulo').value;
+  const est = document.getElementById('pac-filter-estado').value;
+  let list = pacientes.filter(p => {
+    if (q && !(p.Nombre||'').toLowerCase().includes(q) && !(p.DNI||'').toString().includes(q) && !(p.ObraSocial||'').toLowerCase().includes(q)) return false;
+    if (mod && p.Modulo !== mod) return false;
+    if (est === 'activo' && p.Alta) return false;
+    if (est === 'alta' && !p.Alta) return false;
+    return true;
+  });
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (pacPage > pages) pacPage = 1;
+  const slice = list.slice((pacPage-1)*PAGE_SIZE, pacPage*PAGE_SIZE);
+
+  document.getElementById('pac-tbody').innerHTML = slice.length ? slice.map(p => `<tr>
+    <td style="font-weight:500">${p.Nombre||''}</td>
+    <td style="color:var(--text-muted)">${p.DNI||'-'}</td>
+    <td><span class="badge badge-os">${p.ObraSocial||'-'}</span></td>
+    <td>${badgeModulo(p.Modulo)}</td>
+    <td style="font-size:12px;color:var(--text-muted)">${fmtDate(p.Inicio)||'-'}</td>
+    <td style="font-size:12px;color:var(--text-muted)">${fmtDate(p.Alta)||'-'}</td>
+    <td><span class="badge ${p.Alta?'badge-alta':'badge-activo'}">${p.Alta?'Alta':'Activo'}</span></td>
+    <td style="font-size:12px;color:var(--text-muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.Notas||''}">${p.Notas||''}</td>
+    <td style="text-align:center;white-space:nowrap">
+      <button class="btn btn-outline btn-icon" onclick="editPaciente(${p.ID})">✏</button>
+      <button class="btn btn-danger btn-icon" onclick="confirmDelete('paciente',${p.ID},'${(p.Nombre||'').replace(/'/g,'\\\')}')">🗑</button>
+    </td>
+  </tr>`).join('') : `<tr><td colspan="9" class="no-data">No se encontraron pacientes.</td></tr>`;
+
+  renderPagination('pac-pagination', pacPage, pages, total, n => { pacPage = n; renderPacientes(); });
+}
+
+function openModalPaciente() {
+  editPacId = null;
+  document.getElementById('modal-pac-title').textContent = 'Nuevo Paciente';
+  clearFields(['pac-nombre','pac-dni','pac-fnac','pac-os','pac-inicio','pac-alta','pac-domicilio','pac-contacto','pac-notas']);
+  document.getElementById('pac-modulo').value = '';
+  openModal('modal-paciente');
+}
+
+function editPaciente(id) {
+  const p = pacientes.find(x => x.ID == id);
+  if (!p) return;
+  editPacId = id;
+  document.getElementById('modal-pac-title').textContent = 'Editar Paciente';
+  setVal('pac-nombre', p.Nombre); setVal('pac-dni', p.DNI);
+  setVal('pac-os', p.ObraSocial); setVal('pac-modulo', p.Modulo);
+  setVal('pac-inicio', fmtDate(p.Inicio) !== '-' ? fmtDate(p.Inicio) : '');
+  setVal('pac-alta', fmtDate(p.Alta) !== '-' ? fmtDate(p.Alta) : '');
+  setVal('pac-fnac', fmtDate(p.FechaNac) !== '-' ? fmtDate(p.FechaNac) : '');
+  setVal('pac-domicilio', p.Domicilio); setVal('pac-contacto', p.Contacto); setVal('pac-notas', p.Notas);
+  openModal('modal-paciente');
+}
+
+async function savePaciente() {
+  const nombre = document.getElementById('pac-nombre').value.trim();
+  if (!nombre) { toast('El nombre es obligatorio.', 'error'); return; }
+  const data = {
+    Nombre: nombre, DNI: document.getElementById('pac-dni').value.trim(),
+    ObraSocial: document.getElementById('pac-os').value.trim(),
+    Modulo: document.getElementById('pac-modulo').value,
+    Inicio: document.getElementById('pac-inicio').value || null,
+    Alta: document.getElementById('pac-alta').value || null,
+    FechaNac: document.getElementById('pac-fnac').value || null,
+    Domicilio: document.getElementById('pac-domicilio').value.trim(),
+    Contacto: document.getElementById('pac-contacto').value.trim(),
+    Notas: document.getElementById('pac-notas').value.trim(),
+  };
+  setBtnLoading('btn-save-pac', true);
+  try {
+    const action = editPacId ? 'editPaciente' : 'addPaciente';
+    const body = editPacId ? {action, id: editPacId, data} : {action, data};
+    const res = await apiPost(body);
+    if (res.ok) {
+      toast(editPacId ? 'Paciente actualizado.' : 'Paciente agregado.', 'success');
+      closeModal('modal-paciente');
+      await recargar();
+    } else {
+      toast('Error: ' + (res.error||'desconocido'), 'error');
+    }
+  } catch(e) {
+    toast('Error de red: ' + e.message, 'error');
+  } finally {
+    setBtnLoading('btn-save-pac', false);
+  }
+}
+
+// =====================================================
+// FACTURAS
+// =====================================================
+function renderFacturas() {
+  const q = document.getElementById('fac-search').value.toLowerCase();
+  const os = document.getElementById('fac-filter-os').value;
+  const est = document.getElementById('fac-filter-estado').value;
+  let list = facturas.filter(f => {
+    if (!f.Paciente) return false;
+    if (q && !(f.Paciente||'').toLowerCase().includes(q) && !(f.NroFactura||'').toString().includes(q) && !(f.ObraSocial||'').toLowerCase().includes(q)) return false;
+    if (os && f.ObraSocial !== os) return false;
+    if (est && saldoStatus(f.MontoFactura, f.MontoAbonado, f.MontoNC) !== est) return false;
+    return true;
+  }).sort((a,b) => String(b.Fecha||'0').localeCompare(String(a.Fecha||'0')));
+
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (facPage > pages) facPage = 1;
+  const slice = list.slice((facPage-1)*PAGE_SIZE, facPage*PAGE_SIZE);
+  const totSaldo = list.reduce((s,f) => s + (f.Saldo||0), 0);
+
+  document.getElementById('fac-tbody').innerHTML = slice.length ? slice.map(f => {
+    const st = saldoStatus(f.MontoFactura, f.MontoAbonado, f.MontoNC);
+    const stBadge = {pagado:`<span class="badge badge-pagado">✓ Pagado</span>`, pendiente:`<span class="badge badge-pendiente">Pendiente</span>`, parcial:`<span class="badge" style="background:#fff3cd;color:#856404">Parcial</span>`};
+    return `<tr>
+      <td style="font-size:12px;white-space:nowrap">${fmtDate(f.Fecha)}</td>
+      <td style="font-weight:500;max-width:180px">${f.Paciente||''}</td>
+      <td><span class="badge badge-os" style="font-size:10px">${f.ObraSocial||'-'}</span></td>
+      <td>${badgeModulo(f.Modulo)}</td>
+      <td style="font-family:monospace;font-size:12.5px">${f.NroFactura||'-'}</td>
+      <td class="text-right">$ ${fmt(f.MontoFactura)}</td>
+      <td class="text-right" style="color:var(--success)">$ ${fmt(f.MontoAbonado)}</td>
+      <td class="text-right" style="color:var(--teal-light);font-size:12px">${f.NroNC ? `#${f.NroNC}<br>$ ${fmt(f.MontoNC)}` : '-'}</td>
+      <td class="text-right">${badgeSaldo(f.Saldo)}</td>
+      <td style="font-size:11.5px;color:var(--text-muted)">${f.Periodo||'-'}</td>
+      <td style="font-size:11.5px;color:var(--text-muted)">${f.Expediente||'-'}</td>
+      <td style="font-size:11.5px">${f.Reintegro||'-'}</td>
+      <td style="text-align:center;white-space:nowrap">
+        <button class="btn btn-outline btn-icon" onclick="editFactura(${f.ID})">✏</button>
+        <button class="btn btn-danger btn-icon" onclick="confirmDelete('factura',${f.ID},'Fact. ${f.NroFactura||''} - ${(f.Paciente||'').replace(/'/g,'\\\')}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="13" class="no-data">No se encontraron registros.</td></tr>`;
+
+  renderPagination('fac-pagination', facPage, pages, total, n => { facPage = n; renderFacturas(); }, `Saldo filtrado: <strong>$ ${fmtShort(totSaldo)}</strong>`);
+}
+
+function openModalFactura() {
+  editFacId = null;
+  document.getElementById('modal-fac-title').textContent = 'Nueva Factura';
+  clearFields(['fac-fecha','fac-nro','fac-paciente','fac-os','fac-monto-factura','fac-monto-abonado','fac-nro-nc','fac-monto-nc','fac-saldo','fac-periodo','fac-expediente']);
+  document.getElementById('fac-modulo').value = '';
+  document.getElementById('fac-reintegro').value = '';
+  document.getElementById('fac-fecha').value = new Date().toISOString().slice(0,10);
+  openModal('modal-factura');
+}
+
+function editFactura(id) {
+  const f = facturas.find(x => x.ID == id);
+  if (!f) return;
+  editFacId = id;
+  document.getElementById('modal-fac-title').textContent = 'Editar Factura';
+  setVal('fac-fecha', fmtDate(f.Fecha) !== '-' ? fmtDate(f.Fecha) : '');
+  setVal('fac-nro', f.NroFactura); setVal('fac-paciente', f.Paciente);
+  setVal('fac-os', f.ObraSocial); setVal('fac-modulo', f.Modulo);
+  setVal('fac-monto-factura', f.MontoFactura); setVal('fac-monto-abonado', f.MontoAbonado);
+  setVal('fac-nro-nc', f.NroNC); setVal('fac-monto-nc', f.MontoNC);
+  setVal('fac-saldo', f.Saldo); setVal('fac-periodo', f.Periodo);
+  setVal('fac-expediente', f.Expediente); setVal('fac-reintegro', f.Reintegro);
+  openModal('modal-factura');
+}
+
+function calcSaldo() {
+  const mf  = parseFloat(document.getElementById('fac-monto-factura').value) || 0;
+  const ma  = parseFloat(document.getElementById('fac-monto-abonado').value) || 0;
+  const mnc = parseFloat(document.getElementById('fac-monto-nc').value)      || 0;
+  document.getElementById('fac-saldo').value = Math.max(0, mf - ma - mnc).toFixed(2);
+}
+
+async function saveFactura() {
+  const paciente = document.getElementById('fac-paciente').value.trim();
+  if (!paciente) { toast('El paciente es obligatorio.', 'error'); return; }
+  const data = {
+    Fecha:         document.getElementById('fac-fecha').value || null,
+    NroFactura:    parseInt(document.getElementById('fac-nro').value) || null,
+    Paciente:      paciente,
+    ObraSocial:    document.getElementById('fac-os').value.trim(),
+    Modulo:        document.getElementById('fac-modulo').value,
+    MontoFactura:  parseFloat(document.getElementById('fac-monto-factura').value) || null,
+    MontoAbonado:  parseFloat(document.getElementById('fac-monto-abonado').value) || null,
+    NroNC:         parseInt(document.getElementById('fac-nro-nc').value) || null,
+    MontoNC:       parseFloat(document.getElementById('fac-monto-nc').value) || null,
+    Saldo:         parseFloat(document.getElementById('fac-saldo').value) || 0,
+    Periodo:       document.getElementById('fac-periodo').value.trim(),
+    Expediente:    document.getElementById('fac-expediente').value.trim(),
+    Reintegro:     document.getElementById('fac-reintegro').value,
+  };
+  // auto-fill DNI from paciente list
+  const pac = pacientes.find(p => p.Nombre === paciente);
+  if (pac) data.DNI = pac.DNI;
+
+  setBtnLoading('btn-save-fac', true);
+  try {
+    const action = editFacId ? 'editFactura' : 'addFactura';
+    const body = editFacId ? {action, id: editFacId, data} : {action, data};
+    const res = await apiPost(body);
+    if (res.ok) {
+      toast(editFacId ? 'Factura actualizada.' : 'Factura registrada.', 'success');
+      closeModal('modal-factura');
+      await recargar();
+    } else {
+      toast('Error: ' + (res.error||'desconocido'), 'error');
+    }
+  } catch(e) {
+    toast('Error de red: ' + e.message, 'error');
+  } finally {
+    setBtnLoading('btn-save-fac', false);
+  }
+}
+
+// =====================================================
+// DEUDORES
+// =====================================================
+function renderDeudores() {
+  const q = document.getElementById('deu-search').value.toLowerCase();
+  const os = document.getElementById('deu-filter-os').value;
+  const byPac = {};
+  facturas.filter(f=>f.Paciente).forEach(f => {
+    const k = f.Paciente;
+    if (!byPac[k]) byPac[k] = {paciente:f.Paciente, os:f.ObraSocial, fact:0, abon:0, nc:0, saldo:0, cnt:0};
+    byPac[k].fact += f.MontoFactura||0; byPac[k].abon += f.MontoAbonado||0;
+    byPac[k].nc += f.MontoNC||0; byPac[k].saldo += f.Saldo||0; byPac[k].cnt++;
+  });
+  let list = Object.values(byPac).filter(r=>r.saldo>0).sort((a,b)=>b.saldo-a.saldo);
+  if (q) list = list.filter(r => r.paciente.toLowerCase().includes(q) || (r.os||'').toLowerCase().includes(q));
+  if (os) list = list.filter(r => r.os === os);
+
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (deuPage > pages) deuPage = 1;
+  const slice = list.slice((deuPage-1)*PAGE_SIZE, deuPage*PAGE_SIZE);
+
+  document.getElementById('deu-tbody').innerHTML = slice.length ? slice.map(r => `<tr>
+    <td style="font-weight:500">${r.paciente}</td>
+    <td><span class="badge badge-os">${r.os||'-'}</span></td>
+    <td class="text-right">$ ${fmt(r.fact)}</td>
+    <td class="text-right" style="color:var(--success)">$ ${fmt(r.abon)}</td>
+    <td class="text-right" style="color:var(--teal-light)">$ ${fmt(r.nc)}</td>
+    <td class="text-right"><span class="amount-neg">$ ${fmt(r.saldo)}</span></td>
+    <td style="color:var(--text-muted)">${r.cnt}</td>
+  </tr>`).join('') : `<tr><td colspan="7" class="no-data">No hay deudores pendientes 🎉</td></tr>`;
+
+  renderPagination('deu-pagination', deuPage, pages, total, n => { deuPage = n; renderDeudores(); }, `Total: <strong>$ ${fmtShort(list.reduce((s,r)=>s+r.saldo,0))}</strong>`);
+}
+
+// =====================================================
+// RESUMEN OS
+// =====================================================
+function renderResumen() {
+  const byOS = {};
+  facturas.filter(f=>f.Paciente).forEach(f => {
+    const k = f.ObraSocial || 'Sin OS';
+    if (!byOS[k]) byOS[k] = {os:k, pacs:new Set(), cnt:0, fact:0, abon:0, nc:0, saldo:0};
+    byOS[k].pacs.add(f.Paciente); byOS[k].cnt++;
+    byOS[k].fact += f.MontoFactura||0; byOS[k].abon += f.MontoAbonado||0;
+    byOS[k].nc += f.MontoNC||0; byOS[k].saldo += f.Saldo||0;
+  });
+  const list = Object.values(byOS).sort((a,b)=>b.saldo-a.saldo);
+  document.getElementById('res-tbody').innerHTML = list.map(r => `<tr>
+    <td style="font-weight:500">${r.os}</td>
+    <td class="text-right">${r.pacs.size}</td><td class="text-right">${r.cnt}</td>
+    <td class="text-right">$ ${fmt(r.fact)}</td>
+    <td class="text-right" style="color:var(--success)">$ ${fmt(r.abon)}</td>
+    <td class="text-right" style="color:var(--teal-light)">$ ${fmt(r.nc)}</td>
+    <td class="text-right">${badgeSaldo(r.saldo)}</td>
+  </tr>`).join('');
+  const t = list.reduce((a,r) => ({f:a.f+r.fact,ab:a.ab+r.abon,nc:a.nc+r.nc,s:a.s+r.saldo}), {f:0,ab:0,nc:0,s:0});
+  document.getElementById('res-tfoot').innerHTML = `<tr>
+    <td><strong>TOTAL</strong></td>
+    <td class="text-right"><strong>${new Set(facturas.map(f=>f.Paciente)).size}</strong></td>
+    <td class="text-right"><strong>${facturas.length}</strong></td>
+    <td class="text-right"><strong>$ ${fmt(t.f)}</strong></td>
+    <td class="text-right" style="color:var(--success)"><strong>$ ${fmt(t.ab)}</strong></td>
+    <td class="text-right" style="color:var(--teal-light)"><strong>$ ${fmt(t.nc)}</strong></td>
+    <td class="text-right"><span class="amount-neg"><strong>$ ${fmt(t.s)}</strong></span></td>
+  </tr>`;
+}
+
+// =====================================================
+// PAGINATION
+// =====================================================
+function renderPagination(elId, cur, pages, total, cb, extra) {
+  const el = document.getElementById(elId);
+  let btns = `<button class="pag-btn" ${cur<=1?'disabled':''} onclick="(${cb.toString()})(${cur-1})">‹</button>`;
+  for (let i=1;i<=pages;i++) {
+    if (pages > 7 && Math.abs(i-cur)>2 && i!==1 && i!==pages) { if(i===2||i===pages-1) btns+='<span style="padding:0 4px;color:var(--text-muted)">…</span>'; continue; }
+    btns += `<button class="pag-btn ${i===cur?'active':''}" onclick="(${cb.toString()})(${i})">${i}</button>`;
+  }
+  btns += `<button class="pag-btn" ${cur>=pages?'disabled':''} onclick="(${cb.toString()})(${cur+1})">›</button>`;
+  el.innerHTML = `<span>${extra||''} · ${total} registros</span><div class="pagination-btns">${btns}</div>`;
+}
+
+// =====================================================
+// DELETE CONFIRM
+// =====================================================
+function confirmDelete(type, id, name) {
+  document.getElementById('confirm-msg').textContent = `¿Eliminar "${name}"? Esta acción no se puede deshacer.`;
+  document.getElementById('confirm-ok-btn').onclick = async () => {
+    showLoading('Eliminando...');
+    try {
+      const action = type === 'paciente' ? 'deletePaciente' : 'deleteFactura';
+      const res = await apiPost({action, id});
+      if (res.ok) { toast('Eliminado correctamente.', 'success'); closeModal('modal-confirm'); await recargar(); }
+      else toast('Error: ' + (res.error||''), 'error');
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+    finally { hideLoading(); }
+  };
+  openModal('modal-confirm');
+}
+
+// =====================================================
+// EXPORT CSV
+// =====================================================
+function exportCSV() {
+  const headers = ['Fecha','Paciente','Obra Social','Módulo','N° Factura','Monto Factura','Monto Abonado','N° N/C','Monto N/C','Saldo','Período','Expediente','Reintegro'];
+  const rows = facturas.filter(f=>f.Paciente).map(f => [
+    fmtDate(f.Fecha),f.Paciente,f.ObraSocial||'',f.Modulo||'',f.NroFactura||'',
+    f.MontoFactura||'',f.MontoAbonado||'',f.NroNC||'',f.MontoNC||'',
+    f.Saldo||'',f.Periodo||'',f.Expediente||'',f.Reintegro||''
+  ]);
+  const csv = [headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download = `ARENE_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('CSV exportado.', 'success');
+}
+
+// =====================================================
+// MODAL / UTILS
+// =====================================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+});
+function clearFields(ids) { ids.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; }); }
+function setVal(id, v) { const el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
+function setBtnLoading(id, loading) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Guardando...' : (id.includes('pac') ? 'Guardar Paciente' : 'Guardar Factura');
+}
+function toast(msg, type='') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type==='success'?'✓':type==='error'?'✕':'ℹ'}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+init();
+</script>
+</body>
+</html>
